@@ -1,4 +1,4 @@
-import { gameState, mouse } from './gameState.js';
+import { gameState, mouse, keys } from './gameState.js';
 import { initRenderer, resizeCanvas, drawGame, drawMinimap, updateLeaderboard } from './renderer.js';
 import { updatePlayer, updateAI, initEntities, handlePlayerSplit } from './entities.js';
 import { handleFoodCollisions, handlePlayerAICollisions, handleAIAICollisions, respawnEntities } from './collisions.js';
@@ -18,10 +18,45 @@ function setupInputHandlers() {
         handlePlayerSplit();
     });
 
+    document.addEventListener('keydown', (e) => {
+        switch(e.code) {
+            case 'Space':
+                e.preventDefault();
+                keys.space = true;
+                break;
+            case 'ShiftLeft':
+            case 'ShiftRight':
+                keys.shift = true;
+                break;
+            case 'KeyF':
+                e.preventDefault();
+                toggleFlyingMode();
+                break;
+        }
+    });
+
+    document.addEventListener('keyup', (e) => {
+        switch(e.code) {
+            case 'Space':
+                keys.space = false;
+                break;
+            case 'ShiftLeft':
+            case 'ShiftRight':
+                keys.shift = false;
+                break;
+        }
+    });
+
     // Window resize
     window.addEventListener('resize', () => {
         resizeCanvas();
     });
+}
+
+function toggleFlyingMode() {
+    gameState.gameMode = gameState.gameMode === 'normal' ? 'flying' : 'normal';
+    gameState.flyingEnabled = gameState.gameMode === 'flying';
+    console.log(`Flying mode: ${gameState.gameMode}`);
 }
 
 function checkCollisions() {

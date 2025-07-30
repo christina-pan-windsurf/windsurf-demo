@@ -19,6 +19,16 @@ export const MERGE_COOLDOWN = 10000;  // Time in ms before cells can merge
 export const MERGE_FORCE = 0.3;       // Strength of the merging force
 export const MERGE_START_FORCE = 0.1; // Initial attraction force (before merge cooldown)
 
+// Flying mechanics
+export const GRAVITY_FORCE = 0.5;        // Downward force when not flying
+export const FLYING_SPEED = 8;           // Upward speed when spacebar held
+export const DESCENT_SPEED = 12;         // Faster descent when shift held
+export const MAX_ALTITUDE = 200;         // Maximum altitude limit
+export const GROUND_LEVEL = 0;           // Ground altitude level
+export const ALTITUDE_SCALE_FACTOR = 0.8; // How much altitude affects visual size
+export const SHADOW_OPACITY = 0.3;       // Shadow transparency
+export const ALTITUDE_COLOR_SHIFT = 30;  // HSL hue shift for altitude indication
+
 export const COLORS = {
     PLAYER: '#008080',  // Teal color
     MINIMAP: {
