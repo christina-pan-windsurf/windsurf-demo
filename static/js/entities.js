@@ -1,4 +1,4 @@
-import { gameState, mouse } from './gameState.js';
+import { gameState, mouse, keys } from './gameState.js';
 import { getSize, getRandomPosition, calculateCenterOfMass, getDistance } from './utils.js';
 import { 
     WORLD_SIZE, 
@@ -11,7 +11,12 @@ import {
     MERGE_COOLDOWN,
     MERGE_DISTANCE,
     MERGE_FORCE,
-    MERGE_START_FORCE
+    MERGE_START_FORCE,
+    GRAVITY_FORCE,
+    FLYING_SPEED,
+    DESCENT_SPEED,
+    MAX_ALTITUDE,
+    GROUND_LEVEL
 } from './config.js';
 
 const AI_NAMES = [
@@ -158,7 +163,9 @@ function updateCellMerging() {
                 score: totalScore,  // This is the sum of all merged cell scores
                 velocityX: avgVelocityX,
                 velocityY: avgVelocityY,
-                splitTime: 0  // Reset split time for merged cell
+                splitTime: 0,  // Reset split time for merged cell
+                altitude: GROUND_LEVEL,
+                verticalVelocity: 0
             });
         });
     }
@@ -178,11 +185,38 @@ export function updatePlayer() {
         // Update each cell
         gameState.playerCells.forEach(cell => {
             // Base speed is inversely proportional to cell size
-            const speed = 5 / (getSize(cell.score) / 20);
+            const baseSpeed = 5 / (getSize(cell.score) / 20);
+            
+            const altitudeSpeedModifier = Math.max(0.5, 1 - (cell.altitude / MAX_ALTITUDE) * 0.5);
+            const speed = baseSpeed * altitudeSpeedModifier;
 
-            // Update velocity (with inertia)
+            // Update horizontal velocity (with inertia)
             cell.velocityX = cell.velocityX * 0.9 + direction.x * speed * 0.1;
             cell.velocityY = cell.velocityY * 0.9 + direction.y * speed * 0.1;
+
+            if (gameState.flyingEnabled) {
+                if (keys.space) {
+                    cell.verticalVelocity = FLYING_SPEED;
+                }
+                else if (keys.shift) {
+                    cell.verticalVelocity = -DESCENT_SPEED;
+                }
+                else {
+                    cell.verticalVelocity -= GRAVITY_FORCE;
+                }
+                
+                // Update altitude
+                cell.altitude += cell.verticalVelocity;
+                
+                cell.altitude = Math.max(GROUND_LEVEL, Math.min(MAX_ALTITUDE, cell.altitude));
+                
+                if (cell.altitude <= GROUND_LEVEL || cell.altitude >= MAX_ALTITUDE) {
+                    cell.verticalVelocity = 0;
+                }
+            } else {
+                cell.altitude = GROUND_LEVEL;
+                cell.verticalVelocity = 0;
+            }
 
             // Update position
             cell.x = Math.max(0, Math.min(WORLD_SIZE, cell.x + cell.velocityX));
@@ -221,7 +255,9 @@ export function splitPlayerCell(cell) {
         score: cell.score / 2,
         velocityX: direction.x * SPLIT_VELOCITY,
         velocityY: direction.y * SPLIT_VELOCITY,
-        splitTime: now
+        splitTime: now,
+        altitude: cell.altitude || GROUND_LEVEL,
+        verticalVelocity: cell.verticalVelocity || 0
     };
 
     // Update original cell
@@ -250,9 +286,38 @@ export function updateAI() {
             ai.direction = Math.random() * Math.PI * 2;
         }
 
-        const speed = 5 / (getSize(ai.score) / 20);
-        ai.x += Math.cos(ai.direction) * speed;
-        ai.y += Math.sin(ai.direction) * speed;
+        const baseSpeed = 5 / (getSize(ai.score) / 20);
+        
+        if (gameState.flyingEnabled) {
+            if (Math.random() < 0.01) {
+                ai.targetAltitude = Math.random() * MAX_ALTITUDE;
+            }
+            
+            const altitudeDiff = ai.targetAltitude - ai.altitude;
+            if (Math.abs(altitudeDiff) > 5) {
+                ai.verticalVelocity = Math.sign(altitudeDiff) * FLYING_SPEED * 0.5;
+            } else {
+                ai.verticalVelocity -= GRAVITY_FORCE;
+            }
+            
+            ai.altitude += ai.verticalVelocity;
+            ai.altitude = Math.max(GROUND_LEVEL, Math.min(MAX_ALTITUDE, ai.altitude));
+            
+            if (ai.altitude <= GROUND_LEVEL || ai.altitude >= MAX_ALTITUDE) {
+                ai.verticalVelocity = 0;
+            }
+            
+            const altitudeSpeedModifier = Math.max(0.5, 1 - (ai.altitude / MAX_ALTITUDE) * 0.5);
+            const speed = baseSpeed * altitudeSpeedModifier;
+            
+            ai.x += Math.cos(ai.direction) * speed;
+            ai.y += Math.sin(ai.direction) * speed;
+        } else {
+            ai.altitude = GROUND_LEVEL;
+            ai.verticalVelocity = 0;
+            ai.x += Math.cos(ai.direction) * baseSpeed;
+            ai.y += Math.sin(ai.direction) * baseSpeed;
+        }
 
         ai.x = Math.max(0, Math.min(WORLD_SIZE, ai.x));
         ai.y = Math.max(0, Math.min(WORLD_SIZE, ai.y));
@@ -285,7 +350,10 @@ export function initEntities() {
             score: AI_STARTING_SCORE,
             color: `hsl(${Math.random() * 360}, 70%, 50%)`,
             direction: Math.random() * Math.PI * 2,
-            name: getUnusedAIName()
+            name: getUnusedAIName(),
+            altitude: GROUND_LEVEL,
+            verticalVelocity: 0,
+            targetAltitude: GROUND_LEVEL
         };
         gameState.aiPlayers.push(ai);
     }
@@ -308,6 +376,9 @@ export function respawnAI() {
         score: AI_STARTING_SCORE,
         color: `hsl(${Math.random() * 360}, 70%, 50%)`,
         direction: Math.random() * Math.PI * 2,
-        name: name
+        name: name,
+        altitude: GROUND_LEVEL,
+        verticalVelocity: 0,
+        targetAltitude: GROUND_LEVEL
     };
 }

@@ -4,13 +4,14 @@ import { FOOD_SIZE, FOOD_SCORE, COLLISION_THRESHOLD, FOOD_COUNT, AI_COUNT, START
 import { respawnAI } from './entities.js';
 
 export function handleFoodCollisions() {
-    // Player cells eating food
+    // Player cells eating food (only at ground level)
     for (const playerCell of gameState.playerCells) {
         gameState.food = gameState.food.filter(food => {
             const distance = getDistance(playerCell, food);
             const playerSize = getSize(playerCell.score);
+            const altitudeProximity = playerCell.altitude <= 10; // Can only eat food near ground
 
-            if (distance < playerSize + FOOD_SIZE) {
+            if (distance < playerSize + FOOD_SIZE && altitudeProximity) {
                 playerCell.score += FOOD_SCORE;
                 return false;
             }
@@ -18,13 +19,14 @@ export function handleFoodCollisions() {
         });
     }
 
-    // AI eating food
+    // AI eating food (only at ground level)
     for (const ai of gameState.aiPlayers) {
         gameState.food = gameState.food.filter(food => {
             const distance = getDistance(ai, food);
             const aiSize = getSize(ai.score);
+            const altitudeProximity = ai.altitude <= 10;
 
-            if (distance < aiSize + FOOD_SIZE) {
+            if (distance < aiSize + FOOD_SIZE && altitudeProximity) {
                 ai.score += FOOD_SCORE;
                 return false;
             }
@@ -49,8 +51,9 @@ export function handlePlayerAICollisions() {
             const playerSize = getSize(playerCell.score);
             const aiSize = getSize(ai.score);
             const minDistance = playerSize + aiSize;
+            const altitudeDiff = Math.abs(playerCell.altitude - ai.altitude);
 
-            if (distance < minDistance) {
+            if (distance < minDistance && altitudeDiff < 20) {
                 // Player cell is bigger
                 if (playerSize > aiSize * COLLISION_THRESHOLD) {
                     const currentGain = scoreGains.get(playerCellIndex) || 0;
@@ -92,7 +95,9 @@ export function handlePlayerAICollisions() {
             y: safePos.y,
             score: STARTING_SCORE,
             velocityX: 0,
-            velocityY: 0
+            velocityY: 0,
+            altitude: 0,
+            verticalVelocity: 0
         });
     }
 }
@@ -114,8 +119,9 @@ export function handleAIAICollisions() {
             const ai1Size = getSize(ai1.score);
             const ai2Size = getSize(ai2.score);
             const minDistance = ai1Size + ai2Size;
+            const altitudeDiff = Math.abs(ai1.altitude - ai2.altitude);
 
-            if (distance < minDistance) {
+            if (distance < minDistance && altitudeDiff < 20) {
                 if (ai1Size > ai2Size * COLLISION_THRESHOLD) {
                     const currentGain = scoreGains.get(i) || 0;
                     scoreGains.set(i, currentGain + ai2.score + 100);
@@ -171,7 +177,9 @@ export function respawnEntities() {
             y: safePos.y,
             score: STARTING_SCORE,
             velocityX: 0,
-            velocityY: 0
+            velocityY: 0,
+            altitude: 0,
+            verticalVelocity: 0
         });
     }
 }
