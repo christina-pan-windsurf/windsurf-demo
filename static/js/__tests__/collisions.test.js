@@ -8,7 +8,8 @@ jest.mock('../gameState.js', () => ({
     playerCells: [],
     aiPlayers: [],
     food: []
-  }
+  },
+  mouse: { x: 0, y: 0 }
 }));
 
 describe('handleFoodCollisions', () => {
