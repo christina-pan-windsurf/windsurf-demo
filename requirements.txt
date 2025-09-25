@@ -1,3 +1,9 @@
 Flask==2.0.1
-numpy==1.21.0
-Werkzeug>=2,<3
+numpy>=1.24.0
+Werkzeug>=2.0,<2.1
+
+# Testing dependencies
+pytest==7.4.3
+coverage==7.3.2
+# Note: Avoid Flask-Testing due to compatibility issues
+# Use Flask's built-in test client instead
